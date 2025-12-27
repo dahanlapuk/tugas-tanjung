@@ -1,13 +1,16 @@
 {
     "name": "migration-scripts",
     "version": "1.0.0",
+    "description": "Migration scripts for MySQL to PostgreSQL",
     "type": "module",
     "scripts": {
         "migrate": "node migrate.js"
     },
     "dependencies": {
         "mysql2": "^3.6.5",
-        "mongoose": "^8.0.3",
+        "sequelize": "^6.37.7",
+        "pg": "^8.16.3",
+        "pg-hstore": "^2.3.4",
         "dotenv": "^16.3.1",
         "bcryptjs": "^2.4.3"
     }

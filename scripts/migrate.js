@@ -18,12 +18,12 @@ import {
 
 dotenv.config({ path: '../server/.env' });
 
-// MySQL Connection
+// MySQL Connection - Configure these based on your MySQL setup
 const mysqlConfig = {
-    host: 'localhost',
-    user: 'root',
-    password: '',
-    database: 'ecommerce'
+    host: process.env.MYSQL_HOST || 'localhost',
+    user: process.env.MYSQL_USER || 'root',
+    password: process.env.MYSQL_PASSWORD || '', // SET YOUR MYSQL PASSWORD HERE
+    database: process.env.MYSQL_DATABASE || 'ecommerce'
 };
 
 // PostgreSQL Connection (using Sequelize from server)

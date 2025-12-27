@@ -33,11 +33,10 @@ const connectDB = async () => {
         await sequelize.authenticate();
         console.log('✓ PostgreSQL Connected');
 
-        // Sync models in development
-        if (process.env.NODE_ENV === 'development') {
-            await sequelize.sync({ force: true }); // WARNING: Drops existing tables!
-            console.log('✓ Database synced (tables created)');
-        }
+        // Sync models (create tables)
+        // WARNING: force:true drops existing tables on every restart!
+        await sequelize.sync({ force: true });
+        console.log('✓ Database synced (tables created)');
     } catch (error) {
         console.error('✗ Unable to connect to PostgreSQL:', error.message);
         process.exit(1);
