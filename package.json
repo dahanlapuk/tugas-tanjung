@@ -1,0 +1,22 @@
+{
+  "name": "tugas-tanjung-mern",
+  "version": "1.0.0",
+  "description": "tugasnya faizal tanjung, refactor dari CodeIgniter (PHP) ke MERN",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dahanlapuk/tugas-tanjung.git"
+  },
+  "keywords": [
+    "tugas"
+  ],
+  "author": "Hexadev Technologies",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/dahanlapuk/tugas-tanjung/issues"
+  },
+  "homepage": "https://github.com/dahanlapuk/tugas-tanjung#readme"
+}

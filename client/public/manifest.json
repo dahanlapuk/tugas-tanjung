@@ -1,0 +1,61 @@
+{
+    "name": "Mie Ayam Bakso Raden",
+    "short_name": "Bakso Raden",
+    "description": "E-Commerce Mie Ayam & Bakso - 100% Daging",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#ffffff",
+    "theme_color": "#ef4444",
+    "orientation": "portrait-primary",
+    "icons": [
+        {
+            "src": "/icon-192x192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any maskable"
+        },
+        {
+            "src": "/icon-512x512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any maskable"
+        }
+    ],
+    "screenshots": [
+        {
+            "src": "/screenshot1.png",
+            "sizes": "540x720",
+            "type": "image/png"
+        }
+    ],
+    "categories": [
+        "food",
+        "shopping"
+    ],
+    "shortcuts": [
+        {
+            "name": "Lihat Menu",
+            "short_name": "Menu",
+            "description": "Browse produk menu",
+            "url": "/products",
+            "icons": [
+                {
+                    "src": "/icon-192x192.png",
+                    "sizes": "192x192"
+                }
+            ]
+        },
+        {
+            "name": "Keranjang",
+            "short_name": "Cart",
+            "description": "Lihat keranjang belanja",
+            "url": "/cart",
+            "icons": [
+                {
+                    "src": "/icon-192x192.png",
+                    "sizes": "192x192"
+                }
+            ]
+        }
+    ]
+}
