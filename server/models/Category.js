@@ -1,16 +1,20 @@
-import mongoose from 'mongoose';
+import { DataTypes } from 'sequelize';
+import sequelize from '../config/database.js';
 
-const categorySchema = new mongoose.Schema({
+const Category = sequelize.define('Category', {
+    id: {
+        type: DataTypes.INTEGER,
+        primaryKey: true,
+        autoIncrement: true
+    },
     name: {
-        type: String,
-        required: [true, 'Category name is required'],
-        unique: true,
-        trim: true
+        type: DataTypes.STRING(191),
+        allowNull: false,
+        unique: true
     }
 }, {
+    tableName: 'product_category',
     timestamps: true
 });
-
-const Category = mongoose.model('Category', categorySchema);
 
 export default Category;

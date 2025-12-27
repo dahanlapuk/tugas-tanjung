@@ -1,47 +1,48 @@
-import mongoose from 'mongoose';
+import { DataTypes } from 'sequelize';
+import sequelize from '../config/database.js';
 
-const couponSchema = new mongoose.Schema({
+const Coupon = sequelize.define('Coupon', {
+    id: {
+        type: DataTypes.BIGINT,
+        primaryKey: true,
+        autoIncrement: true
+    },
     name: {
-        type: String,
-        required: [true, 'Coupon name is required'],
-        trim: true
+        type: DataTypes.STRING(191),
+        allowNull: false
     },
     code: {
-        type: String,
-        required: [true, 'Coupon code is required'],
-        unique: true,
-        uppercase: true,
-        trim: true
+        type: DataTypes.STRING(32),
+        allowNull: false,
+        unique: true
     },
     credit: {
-        type: Number,
-        required: [true, 'Credit amount is required'],
-        min: 0
+        type: DataTypes.DECIMAL(10, 2),
+        allowNull: false
     },
-    startDate: {
-        type: Date,
-        required: true
+    start_date: {
+        type: DataTypes.DATE,
+        allowNull: false
     },
-    expiredDate: {
-        type: Date,
-        required: true
+    expired_date: {
+        type: DataTypes.DATE,
+        allowNull: false
     },
-    isActive: {
-        type: Boolean,
-        default: true
+    is_active: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: true
     }
 }, {
+    tableName: 'coupons',
     timestamps: true
 });
 
 // Method to check if coupon is valid
-couponSchema.methods.isValid = function () {
+Coupon.prototype.isValid = function () {
     const now = new Date();
-    return this.isActive &&
-        this.startDate <= now &&
-        this.expiredDate >= now;
+    return this.is_active &&
+        this.start_date <= now &&
+        this.expired_date >= now;
 };
-
-const Coupon = mongoose.model('Coupon', couponSchema);
 
 export default Coupon;

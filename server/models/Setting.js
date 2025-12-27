@@ -1,20 +1,24 @@
-import mongoose from 'mongoose';
+import { DataTypes } from 'sequelize';
+import sequelize from '../config/database.js';
 
-const settingSchema = new mongoose.Schema({
+const Setting = sequelize.define('Setting', {
+    id: {
+        type: DataTypes.INTEGER,
+        primaryKey: true,
+        autoIncrement: true
+    },
     key: {
-        type: String,
-        required: [true, 'Key is required'],
-        unique: true,
-        trim: true
+        type: DataTypes.STRING(191),
+        allowNull: false,
+        unique: true
     },
     content: {
-        type: String,
-        required: [true, 'Content is required']
+        type: DataTypes.TEXT,
+        allowNull: false
     }
 }, {
+    tableName: 'settings',
     timestamps: true
 });
-
-const Setting = mongoose.model('Setting', settingSchema);
 
 export default Setting;

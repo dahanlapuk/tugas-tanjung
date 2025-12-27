@@ -1,18 +1,20 @@
 import express from 'express';
 import dotenv from 'dotenv';
-import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
+import cors from 'cors';
 import compression from 'compression';
 import morgan from 'morgan';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import rateLimit from 'express-rate-limit';
 
 // Load env vars
 dotenv.config();
 
-// Import database connection
-import connectDB from './config/database.js';
+// Import database
+import { connectDB } from './config/database.js';
+
+// Import models to initialize relationships
+import './models/index.js';
 
 // Import routes
 import authRoutes from './routes/auth.js';
@@ -27,10 +29,6 @@ import contactRoutes from './routes/contacts.js';
 
 // Import middleware
 import errorHandler from './middleware/errorHandler.js';
-
-// Get __dirname in ES modules
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 // Connect to database
 connectDB();
@@ -62,8 +60,15 @@ if (process.env.NODE_ENV === 'development') {
     app.use(morgan('dev'));
 }
 
-// Static folder for uploads
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+// Rate limiting
+const limiter = rateLimit({
+    windowMs: 10 * 60 * 1000, // 10 mins
+    max: 100
+});
+app.use('/api/', limiter);
+
+// Static files
+app.use('/uploads', express.static('uploads'));
 
 // Mount routes
 app.use('/api/auth', authRoutes);
@@ -81,11 +86,12 @@ app.get('/api/health', (req, res) => {
     res.status(200).json({
         success: true,
         message: 'Server is running',
-        timestamp: new Date().toISOString()
+        database: 'PostgreSQL',
+        stack: 'PERN'
     });
 });
 
-// Error handler (must be last)
+// Error handler
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;

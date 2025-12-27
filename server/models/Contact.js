@@ -1,47 +1,52 @@
-import mongoose from 'mongoose';
+import { DataTypes } from 'sequelize';
+import sequelize from '../config/database.js';
 
-const contactSchema = new mongoose.Schema({
-    parentId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Contact',
-        default: null
+const Contact = sequelize.define('Contact', {
+    id: {
+        type: DataTypes.BIGINT,
+        primaryKey: true,
+        autoIncrement: true
+    },
+    parent_id: {
+        type: DataTypes.BIGINT,
+        allowNull: true,
+        references: {
+            model: 'contacts',
+            key: 'id'
+        },
+        onDelete: 'SET NULL'
     },
     name: {
-        type: String,
-        required: [true, 'Name is required'],
-        trim: true
+        type: DataTypes.STRING(191),
+        allowNull: false
     },
     subject: {
-        type: String,
-        trim: true
+        type: DataTypes.STRING(191),
+        allowNull: true
     },
     email: {
-        type: String,
-        required: [true, 'Email is required'],
-        lowercase: true,
-        trim: true
+        type: DataTypes.STRING(191),
+        allowNull: false
     },
     message: {
-        type: String,
-        required: [true, 'Message is required'],
-        trim: true
+        type: DataTypes.TEXT,
+        allowNull: false
     },
-    contactDate: {
-        type: Date,
-        default: Date.now
+    contact_date: {
+        type: DataTypes.DATE,
+        defaultValue: DataTypes.NOW
     },
     status: {
-        type: Number,
-        default: 1 // 1 = unread, 2 = read, 3 = replied
+        type: DataTypes.INTEGER,
+        defaultValue: 1
     },
-    replyAt: {
-        type: Date,
-        default: null
+    reply_at: {
+        type: DataTypes.DATE,
+        allowNull: true
     }
 }, {
+    tableName: 'contacts',
     timestamps: true
 });
-
-const Contact = mongoose.model('Contact', contactSchema);
 
 export default Contact;

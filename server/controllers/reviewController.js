@@ -1,5 +1,4 @@
-import Review from '../models/Review.js';
-import Order from '../models/Order.js';
+import { Review, User, Order } from '../models/index.js';
 
 // @desc    Get all reviews
 // @route   GET /api/reviews
@@ -8,22 +7,33 @@ export const getReviews = async (req, res, next) => {
     try {
         const { page = 1, limit = 10 } = req.query;
 
-        const reviews = await Review.find({ status: true })
-            .populate('userId', 'name profilePicture')
-            .populate('orderId', 'orderNumber')
-            .sort('-reviewDate')
-            .limit(limit * 1)
-            .skip((page - 1) * limit)
-            .exec();
+        const offset = (page - 1) * limit;
 
-        const count = await Review.countDocuments({ status: true });
+        const { count, rows } = await Review.findAndCountAll({
+            where: { status: true },
+            include: [
+                {
+                    model: User,
+                    as: 'user',
+                    attributes: ['id', 'name', 'profile_picture']
+                },
+                {
+                    model: Order,
+                    as: 'order',
+                    attributes: ['id', 'order_number']
+                }
+            ],
+            limit: parseInt(limit),
+            offset,
+            order: [['review_date', 'DESC']]
+        });
 
         res.status(200).json({
             success: true,
-            data: reviews,
+            data: rows,
             pagination: {
-                page: Number(page),
-                limit: Number(limit),
+                page: parseInt(page),
+                limit: parseInt(limit),
                 total: count,
                 pages: Math.ceil(count / limit)
             }
@@ -41,7 +51,7 @@ export const createReview = async (req, res, next) => {
         const { orderId, title, reviewText } = req.body;
 
         // Check if order exists and belongs to user
-        const order = await Order.findById(orderId);
+        const order = await Order.findByPk(orderId);
 
         if (!order) {
             return res.status(404).json({
@@ -50,7 +60,7 @@ export const createReview = async (req, res, next) => {
             });
         }
 
-        if (order.userId.toString() !== req.user.id) {
+        if (order.user_id !== req.user.id) {
             return res.status(403).json({
                 success: false,
                 message: 'Not authorized to review this order'
@@ -58,7 +68,12 @@ export const createReview = async (req, res, next) => {
         }
 
         // Check if review already exists
-        const existingReview = await Review.findOne({ orderId, userId: req.user.id });
+        const existingReview = await Review.findOne({
+            where: {
+                order_id: orderId,
+                user_id: req.user.id
+            }
+        });
 
         if (existingReview) {
             return res.status(400).json({
@@ -68,10 +83,10 @@ export const createReview = async (req, res, next) => {
         }
 
         const review = await Review.create({
-            userId: req.user.id,
-            orderId,
+            user_id: req.user.id,
+            order_id: orderId,
             title,
-            reviewText
+            review_text: reviewText
         });
 
         res.status(201).json({
@@ -88,7 +103,7 @@ export const createReview = async (req, res, next) => {
 // @access  Private
 export const updateReview = async (req, res, next) => {
     try {
-        const review = await Review.findById(req.params.id);
+        const review = await Review.findByPk(req.params.id);
 
         if (!review) {
             return res.status(404).json({
@@ -98,7 +113,7 @@ export const updateReview = async (req, res, next) => {
         }
 
         // Check if user owns this review
-        if (review.userId.toString() !== req.user.id) {
+        if (review.user_id !== req.user.id) {
             return res.status(403).json({
                 success: false,
                 message: 'Not authorized to update this review'
@@ -106,11 +121,11 @@ export const updateReview = async (req, res, next) => {
         }
 
         const { title, reviewText } = req.body;
+        const updateData = {};
+        if (title) updateData.title = title;
+        if (reviewText) updateData.review_text = reviewText;
 
-        if (title) review.title = title;
-        if (reviewText) review.reviewText = reviewText;
-
-        await review.save();
+        await review.update(updateData);
 
         res.status(200).json({
             success: true,
@@ -126,7 +141,7 @@ export const updateReview = async (req, res, next) => {
 // @access  Private/Admin
 export const deleteReview = async (req, res, next) => {
     try {
-        const review = await Review.findByIdAndDelete(req.params.id);
+        const review = await Review.findByPk(req.params.id);
 
         if (!review) {
             return res.status(404).json({
@@ -134,6 +149,8 @@ export const deleteReview = async (req, res, next) => {
                 message: 'Review not found'
             });
         }
+
+        await review.destroy();
 
         res.status(200).json({
             success: true,

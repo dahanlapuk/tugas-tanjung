@@ -1,48 +1,52 @@
-import Payment from '../models/Payment.js';
-import Order from '../models/Order.js';
+import { Payment, Order, User } from '../models/index.js';
 
 // @desc    Get all payments (admin) or user's payments (customer)
 // @route   GET /api/payments
 // @access  Private
 export const getPayments = async (req, res, next) => {
     try {
-        let query = {};
+        const { page = 1, limit = 10, status } = req.query;
+
+        const where = {};
 
         // If not admin, only show user's payments
         if (req.user.role !== 'admin') {
-            // Get user's orders first
-            const orders = await Order.find({ userId: req.user.id }).select('_id');
-            const orderIds = orders.map(order => order._id);
-            query.orderId = { $in: orderIds };
+            const orders = await Order.findAll({
+                where: { user_id: req.user.id },
+                attributes: ['id']
+            });
+            const orderIds = orders.map(order => order.id);
+            where.order_id = orderIds;
         }
-
-        const { page = 1, limit = 10, status } = req.query;
 
         if (status) {
-            query.paymentStatus = status;
+            where.payment_status = status;
         }
 
-        const payments = await Payment.find(query)
-            .populate({
-                path: 'orderId',
-                populate: {
-                    path: 'userId',
-                    select: 'name email'
-                }
-            })
-            .sort('-paymentDate')
-            .limit(limit * 1)
-            .skip((page - 1) * limit)
-            .exec();
+        const offset = (page - 1) * limit;
 
-        const count = await Payment.countDocuments(query);
+        const { count, rows } = await Payment.findAndCountAll({
+            where,
+            include: [{
+                model: Order,
+                as: 'order',
+                include: [{
+                    model: User,
+                    as: 'user',
+                    attributes: ['id', 'name', 'email']
+                }]
+            }],
+            limit: parseInt(limit),
+            offset,
+            order: [['payment_date', 'DESC']]
+        });
 
         res.status(200).json({
             success: true,
-            data: payments,
+            data: rows,
             pagination: {
-                page: Number(page),
-                limit: Number(limit),
+                page: parseInt(page),
+                limit: parseInt(limit),
                 total: count,
                 pages: Math.ceil(count / limit)
             }
@@ -57,14 +61,18 @@ export const getPayments = async (req, res, next) => {
 // @access  Private
 export const getPaymentByOrder = async (req, res, next) => {
     try {
-        const payment = await Payment.findOne({ orderId: req.params.orderId })
-            .populate({
-                path: 'orderId',
-                populate: {
-                    path: 'userId',
-                    select: 'name email'
-                }
-            });
+        const payment = await Payment.findOne({
+            where: { order_id: req.params.orderId },
+            include: [{
+                model: Order,
+                as: 'order',
+                include: [{
+                    model: User,
+                    as: 'user',
+                    attributes: ['id', 'name', 'email']
+                }]
+            }]
+        });
 
         if (!payment) {
             return res.status(404).json({
@@ -74,7 +82,7 @@ export const getPaymentByOrder = async (req, res, next) => {
         }
 
         // Check if user owns this payment
-        if (payment.orderId.userId._id.toString() !== req.user.id && req.user.role !== 'admin') {
+        if (payment.order.user_id !== req.user.id && req.user.role !== 'admin') {
             return res.status(403).json({
                 success: false,
                 message: 'Not authorized to access this payment'
@@ -98,7 +106,7 @@ export const uploadPayment = async (req, res, next) => {
         const { orderId, paymentPrice, paymentData } = req.body;
 
         // Check if order exists and belongs to user
-        const order = await Order.findById(orderId);
+        const order = await Order.findByPk(orderId);
 
         if (!order) {
             return res.status(404).json({
@@ -107,7 +115,7 @@ export const uploadPayment = async (req, res, next) => {
             });
         }
 
-        if (order.userId.toString() !== req.user.id) {
+        if (order.user_id !== req.user.id) {
             return res.status(403).json({
                 success: false,
                 message: 'Not authorized to upload payment for this order'
@@ -115,7 +123,7 @@ export const uploadPayment = async (req, res, next) => {
         }
 
         // Check if payment already exists
-        const existingPayment = await Payment.findOne({ orderId });
+        const existingPayment = await Payment.findOne({ where: { order_id: orderId } });
 
         if (existingPayment) {
             return res.status(400).json({
@@ -125,16 +133,15 @@ export const uploadPayment = async (req, res, next) => {
         }
 
         const payment = await Payment.create({
-            orderId,
-            paymentPrice,
-            pictureName: req.file ? req.file.filename : null,
-            paymentData: paymentData ? JSON.parse(paymentData) : {},
-            paymentStatus: 'pending'
+            order_id: orderId,
+            payment_price: paymentPrice,
+            picture_name: req.file ? req.file.filename : null,
+            payment_data: paymentData ? JSON.parse(paymentData) : {},
+            payment_status: 'pending'
         });
 
         // Update order status
-        order.orderStatus = 'confirmed';
-        await order.save();
+        await order.update({ order_status: 'confirmed' });
 
         res.status(201).json({
             success: true,
@@ -150,7 +157,7 @@ export const uploadPayment = async (req, res, next) => {
 // @access  Private/Admin
 export const confirmPayment = async (req, res, next) => {
     try {
-        const payment = await Payment.findById(req.params.id);
+        const payment = await Payment.findByPk(req.params.id);
 
         if (!payment) {
             return res.status(404).json({
@@ -159,15 +166,15 @@ export const confirmPayment = async (req, res, next) => {
             });
         }
 
-        payment.paymentStatus = 'confirmed';
-        payment.confirmedDate = new Date();
-        await payment.save();
+        await payment.update({
+            payment_status: 'confirmed',
+            confirmed_date: new Date()
+        });
 
         // Update order status
-        const order = await Order.findById(payment.orderId);
+        const order = await Order.findByPk(payment.order_id);
         if (order) {
-            order.orderStatus = 'processing';
-            await order.save();
+            await order.update({ order_status: 'processing' });
         }
 
         res.status(200).json({
@@ -184,7 +191,7 @@ export const confirmPayment = async (req, res, next) => {
 // @access  Private/Admin
 export const rejectPayment = async (req, res, next) => {
     try {
-        const payment = await Payment.findById(req.params.id);
+        const payment = await Payment.findByPk(req.params.id);
 
         if (!payment) {
             return res.status(404).json({
@@ -193,8 +200,7 @@ export const rejectPayment = async (req, res, next) => {
             });
         }
 
-        payment.paymentStatus = 'rejected';
-        await payment.save();
+        await payment.update({ payment_status: 'rejected' });
 
         res.status(200).json({
             success: true,

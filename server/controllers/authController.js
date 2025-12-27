@@ -1,7 +1,6 @@
-import User from '../models/User.js';
-import Customer from '../models/Customer.js';
+import { Op } from 'sequelize';
+import { User, Customer } from '../models/index.js';
 import { sendTokenResponse } from '../utils/jwt.js';
-import bcrypt from 'bcryptjs';
 
 // @desc    Register user
 // @route   POST /api/auth/register
@@ -21,14 +20,21 @@ export const register = async (req, res, next) => {
 
         // Create customer profile
         await Customer.create({
-            userId: user._id,
+            user_id: user.id,
             name: name || username,
-            phoneNumber: phoneNumber || '',
-            address: address || ''
+            phone_number: phoneNumber,
+            address
         });
 
+        // Send token response
         sendTokenResponse(user, 201, res);
     } catch (error) {
+        if (error.name === 'SequelizeUniqueConstraintError') {
+            return res.status(400).json({
+                success: false,
+                message: 'Email atau username sudah terdaftar'
+            });
+        }
         next(error);
     }
 };
@@ -40,18 +46,15 @@ export const login = async (req, res, next) => {
     try {
         const { username, password } = req.body;
 
-        // Validate
-        if (!username || !password) {
-            return res.status(400).json({
-                success: false,
-                message: 'Please provide username and password'
-            });
-        }
-
-        // Check for user (include password for comparison)
+        // Find user by username or email
         const user = await User.findOne({
-            $or: [{ username }, { email: username }]
-        }).select('+password');
+            where: {
+                [Op.or]: [
+                    { username },
+                    { email: username }
+                ]
+            }
+        });
 
         if (!user) {
             return res.status(401).json({
@@ -70,6 +73,7 @@ export const login = async (req, res, next) => {
             });
         }
 
+        // Send token response
         sendTokenResponse(user, 200, res);
     } catch (error) {
         next(error);
@@ -81,7 +85,13 @@ export const login = async (req, res, next) => {
 // @access  Private
 export const getMe = async (req, res, next) => {
     try {
-        const user = await User.findById(req.user.id);
+        const user = await User.findByPk(req.user.id, {
+            include: [{
+                model: Customer,
+                as: 'customer'
+            }],
+            attributes: { exclude: ['password'] }
+        });
 
         res.status(200).json({
             success: true,
@@ -95,16 +105,20 @@ export const getMe = async (req, res, next) => {
 // @desc    Logout user / clear cookie
 // @route   POST /api/auth/logout
 // @access  Private
-export const logout = (req, res, next) => {
-    res.cookie('token', 'none', {
-        expires: new Date(Date.now() + 10 * 1000),
-        httpOnly: true
-    });
+export const logout = async (req, res, next) => {
+    try {
+        res.cookie('token', 'none', {
+            expires: new Date(Date.now() + 10 * 1000),
+            httpOnly: true
+        });
 
-    res.status(200).json({
-        success: true,
-        message: 'Logged out successfully'
-    });
+        res.status(200).json({
+            success: true,
+            message: 'Logged out successfully'
+        });
+    } catch (error) {
+        next(error);
+    }
 };
 
 // @desc    Update password
@@ -114,7 +128,7 @@ export const updatePassword = async (req, res, next) => {
     try {
         const { currentPassword, newPassword } = req.body;
 
-        const user = await User.findById(req.user.id).select('+password');
+        const user = await User.findByPk(req.user.id);
 
         // Check current password
         const isMatch = await user.comparePassword(currentPassword);
@@ -122,13 +136,15 @@ export const updatePassword = async (req, res, next) => {
         if (!isMatch) {
             return res.status(401).json({
                 success: false,
-                message: 'Current password is incorrect'
+                message: 'Password is incorrect'
             });
         }
 
+        // Update password (will be hashed by hook)
         user.password = newPassword;
         await user.save();
 
+        // Send token response
         sendTokenResponse(user, 200, res);
     } catch (error) {
         next(error);

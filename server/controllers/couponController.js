@@ -1,11 +1,13 @@
-import Coupon from '../models/Coupon.js';
+import { Coupon } from '../models/index.js';
 
 // @desc    Get all coupons
 // @route   GET /api/coupons
 // @access  Private/Admin
 export const getCoupons = async (req, res, next) => {
     try {
-        const coupons = await Coupon.find().sort('-createdAt');
+        const coupons = await Coupon.findAll({
+            order: [['created_at', 'DESC']]
+        });
 
         res.status(200).json({
             success: true,
@@ -30,7 +32,9 @@ export const validateCoupon = async (req, res, next) => {
             });
         }
 
-        const coupon = await Coupon.findOne({ code: code.toUpperCase() });
+        const coupon = await Coupon.findOne({
+            where: { code: code.toUpperCase() }
+        });
 
         if (!coupon) {
             return res.status(404).json({
@@ -80,14 +84,7 @@ export const createCoupon = async (req, res, next) => {
 // @access  Private/Admin
 export const updateCoupon = async (req, res, next) => {
     try {
-        const coupon = await Coupon.findByIdAndUpdate(
-            req.params.id,
-            req.body,
-            {
-                new: true,
-                runValidators: true
-            }
-        );
+        const coupon = await Coupon.findByPk(req.params.id);
 
         if (!coupon) {
             return res.status(404).json({
@@ -95,6 +92,8 @@ export const updateCoupon = async (req, res, next) => {
                 message: 'Coupon not found'
             });
         }
+
+        await coupon.update(req.body);
 
         res.status(200).json({
             success: true,
@@ -110,7 +109,7 @@ export const updateCoupon = async (req, res, next) => {
 // @access  Private/Admin
 export const deleteCoupon = async (req, res, next) => {
     try {
-        const coupon = await Coupon.findByIdAndDelete(req.params.id);
+        const coupon = await Coupon.findByPk(req.params.id);
 
         if (!coupon) {
             return res.status(404).json({
@@ -118,6 +117,8 @@ export const deleteCoupon = async (req, res, next) => {
                 message: 'Coupon not found'
             });
         }
+
+        await coupon.destroy();
 
         res.status(200).json({
             success: true,

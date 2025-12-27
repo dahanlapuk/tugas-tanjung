@@ -1,20 +1,11 @@
 import { DataTypes } from 'sequelize';
 import sequelize from '../config/database.js';
 
-const Review = sequelize.define('Review', {
+const OrderItem = sequelize.define('OrderItem', {
     id: {
         type: DataTypes.BIGINT,
         primaryKey: true,
         autoIncrement: true
-    },
-    user_id: {
-        type: DataTypes.INTEGER,
-        allowNull: false,
-        references: {
-            model: 'users',
-            key: 'id'
-        },
-        onDelete: 'CASCADE'
     },
     order_id: {
         type: DataTypes.BIGINT,
@@ -25,25 +16,26 @@ const Review = sequelize.define('Review', {
         },
         onDelete: 'CASCADE'
     },
-    title: {
-        type: DataTypes.STRING(191),
-        allowNull: true
+    product_id: {
+        type: DataTypes.BIGINT,
+        allowNull: false,
+        references: {
+            model: 'products',
+            key: 'id'
+        },
+        onDelete: 'CASCADE'
     },
-    review_text: {
-        type: DataTypes.TEXT,
+    order_qty: {
+        type: DataTypes.INTEGER,
         allowNull: false
     },
-    review_date: {
-        type: DataTypes.DATE,
-        defaultValue: DataTypes.NOW
-    },
-    status: {
-        type: DataTypes.BOOLEAN,
-        defaultValue: true
+    order_price: {
+        type: DataTypes.DECIMAL(10, 2),
+        allowNull: false
     }
 }, {
-    tableName: 'reviews',
+    tableName: 'order_items',
     timestamps: true
 });
 
-export default Review;
+export default OrderItem;

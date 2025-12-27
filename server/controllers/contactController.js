@@ -1,4 +1,4 @@
-import Contact from '../models/Contact.js';
+import { Contact } from '../models/index.js';
 
 // @desc    Get all contacts
 // @route   GET /api/contacts
@@ -7,26 +7,30 @@ export const getContacts = async (req, res, next) => {
     try {
         const { page = 1, limit = 10, status } = req.query;
 
-        const query = {};
+        const where = {};
         if (status) {
-            query.status = Number(status);
+            where.status = Number(status);
         }
 
-        const contacts = await Contact.find(query)
-            .populate('parentId')
-            .sort('-contactDate')
-            .limit(limit * 1)
-            .skip((page - 1) * limit)
-            .exec();
+        const offset = (page - 1) * limit;
 
-        const count = await Contact.countDocuments(query);
+        const { count, rows } = await Contact.findAndCountAll({
+            where,
+            include: [{
+                model: Contact,
+                as: 'parent'
+            }],
+            limit: parseInt(limit),
+            offset,
+            order: [['contact_date', 'DESC']]
+        });
 
         res.status(200).json({
             success: true,
-            data: contacts,
+            data: rows,
             pagination: {
-                page: Number(page),
-                limit: Number(limit),
+                page: parseInt(page),
+                limit: parseInt(limit),
                 total: count,
                 pages: Math.ceil(count / limit)
             }
@@ -41,8 +45,12 @@ export const getContacts = async (req, res, next) => {
 // @access  Private/Admin
 export const getContact = async (req, res, next) => {
     try {
-        const contact = await Contact.findById(req.params.id)
-            .populate('parentId');
+        const contact = await Contact.findByPk(req.params.id, {
+            include: [{
+                model: Contact,
+                as: 'parent'
+            }]
+        });
 
         if (!contact) {
             return res.status(404).json({
@@ -53,8 +61,7 @@ export const getContact = async (req, res, next) => {
 
         // Mark as read
         if (contact.status === 1) {
-            contact.status = 2;
-            await contact.save();
+            await contact.update({ status: 2 });
         }
 
         res.status(200).json({
@@ -96,7 +103,7 @@ export const sendContact = async (req, res, next) => {
 export const replyContact = async (req, res, next) => {
     try {
         const { message } = req.body;
-        const parentContact = await Contact.findById(req.params.id);
+        const parentContact = await Contact.findByPk(req.params.id);
 
         if (!parentContact) {
             return res.status(404).json({
@@ -107,7 +114,7 @@ export const replyContact = async (req, res, next) => {
 
         // Create reply
         const reply = await Contact.create({
-            parentId: parentContact._id,
+            parent_id: parentContact.id,
             name: 'Admin',
             email: parentContact.email,
             subject: `Re: ${parentContact.subject}`,
@@ -115,9 +122,10 @@ export const replyContact = async (req, res, next) => {
         });
 
         // Update parent contact status
-        parentContact.status = 3; // Replied
-        parentContact.replyAt = new Date();
-        await parentContact.save();
+        await parentContact.update({
+            status: 3,
+            reply_at: new Date()
+        });
 
         res.status(201).json({
             success: true,

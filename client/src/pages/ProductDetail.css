@@ -1,0 +1,211 @@
+.product-detail-page {
+    padding: var(--space-12) 0;
+    min-height: 100vh;
+}
+
+.breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin-bottom: var(--space-8);
+    font-size: var(--text-sm);
+    color: var(--color-gray-600);
+}
+
+.breadcrumb a {
+    color: var(--color-primary);
+}
+
+.breadcrumb span:not(:last-child) {
+    color: var(--color-gray-400);
+}
+
+.product-detail {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-12);
+    margin-bottom: var(--space-16);
+}
+
+@media (min-width: 768px) {
+    .product-detail {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+.product-image-section {
+    position: relative;
+}
+
+.product-image-section img {
+    width: 100%;
+    border-radius: var(--radius-2xl);
+    box-shadow: var(--shadow-xl);
+}
+
+.discount-badge {
+    position: absolute;
+    top: var(--space-4);
+    right: var(--space-4);
+    padding: var(--space-3) var(--space-6);
+    background: var(--color-error);
+    color: var(--color-white);
+    font-weight: var(--font-bold);
+    border-radius: var(--radius-full);
+    box-shadow: var(--shadow-lg);
+}
+
+.product-info-section h1 {
+    font-size: var(--text-4xl);
+    margin-bottom: var(--space-2);
+}
+
+.product-sku {
+    color: var(--color-gray-500);
+    margin-bottom: var(--space-6);
+}
+
+.product-price {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    margin-bottom: var(--space-4);
+}
+
+.price-original {
+    font-size: var(--text-lg);
+    color: var(--color-gray-500);
+    text-decoration: line-through;
+}
+
+.price-final {
+    font-size: var(--text-4xl);
+    font-weight: var(--font-bold);
+    color: var(--color-primary);
+}
+
+.product-stock {
+    margin-bottom: var(--space-6);
+}
+
+.in-stock {
+    color: var(--color-success);
+    font-weight: var(--font-semibold);
+}
+
+.out-of-stock {
+    color: var(--color-error);
+    font-weight: var(--font-semibold);
+}
+
+.product-description {
+    color: var(--color-gray-700);
+    line-height: 1.8;
+    margin-bottom: var(--space-8);
+}
+
+.product-actions {
+    display: flex;
+    gap: var(--space-4);
+    margin-bottom: var(--space-8);
+}
+
+.quantity-selector {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    background: var(--color-gray-100);
+    padding: var(--space-2);
+    border-radius: var(--radius-lg);
+}
+
+.quantity-selector button {
+    width: 40px;
+    height: 40px;
+    background: var(--color-white);
+    border: none;
+    border-radius: var(--radius-md);
+    font-size: var(--text-xl);
+    font-weight: var(--font-bold);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.quantity-selector button:hover {
+    background: var(--color-primary);
+    color: var(--color-white);
+}
+
+.quantity-selector input {
+    width: 60px;
+    text-align: center;
+    border: none;
+    background: transparent;
+    font-weight: var(--font-semibold);
+}
+
+.product-meta {
+    border-top: 1px solid var(--color-gray-200);
+    padding-top: var(--space-6);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+}
+
+.meta-item {
+    display: flex;
+    gap: var(--space-3);
+}
+
+.meta-item strong {
+    min-width: 100px;
+    color: var(--color-gray-700);
+}
+
+.related-products {
+    margin-top: var(--space-16);
+}
+
+.related-products h2 {
+    margin-bottom: var(--space-8);
+}
+
+.products-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: var(--space-6);
+}
+
+.related-product-card {
+    background: var(--color-white);
+    border-radius: var(--radius-xl);
+    overflow: hidden;
+    box-shadow: var(--shadow-md);
+    transition: all var(--transition-base);
+    text-decoration: none;
+    color: inherit;
+}
+
+.related-product-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-xl);
+}
+
+.related-product-card img {
+    width: 100%;
+    aspect-ratio: 1;
+    object-fit: cover;
+}
+
+.related-product-card h3 {
+    padding: var(--space-4);
+    font-size: var(--text-base);
+    margin: 0;
+}
+
+.related-product-card .price {
+    padding: 0 var(--space-4) var(--space-4);
+    color: var(--color-primary);
+    font-weight: var(--font-bold);
+    margin: 0;
+}

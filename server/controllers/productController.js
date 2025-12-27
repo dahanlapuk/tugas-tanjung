@@ -1,49 +1,56 @@
-import Product from '../models/Product.js';
-import Category from '../models/Category.js';
+import { Op } from 'sequelize';
+import { Product, Category } from '../models/index.js';
 
 // @desc    Get all products
 // @route   GET /api/products
 // @access  Public
 export const getProducts = async (req, res, next) => {
     try {
-        const { page = 1, limit = 12, category, search, minPrice, maxPrice, sort = '-createdAt' } = req.query;
+        const { page = 1, limit = 12, category, search, sort = '-created_at' } = req.query;
 
-        // Build query
-        const query = { isAvailable: true };
+        const where = {};
 
+        // Filter by category
         if (category) {
-            query.categoryId = category;
+            where.category_id = category;
         }
 
+        // Search
         if (search) {
-            query.$or = [
-                { name: { $regex: search, $options: 'i' } },
-                { description: { $regex: search, $options: 'i' } }
+            where[Op.or] = [
+                { name: { [Op.iLike]: `%${search}%` } },
+                { description: { [Op.iLike]: `%${search}%` } }
             ];
         }
 
-        if (minPrice || maxPrice) {
-            query.price = {};
-            if (minPrice) query.price.$gte = Number(minPrice);
-            if (maxPrice) query.price.$lte = Number(maxPrice);
+        // Sorting
+        let order = [];
+        if (sort.startsWith('-')) {
+            order.push([sort.substring(1), 'DESC']);
+        } else {
+            order.push([sort, 'ASC']);
         }
 
-        // Execute query with pagination
-        const products = await Product.find(query)
-            .populate('categoryId', 'name')
-            .sort(sort)
-            .limit(limit * 1)
-            .skip((page - 1) * limit)
-            .exec();
+        const offset = (page - 1) * limit;
 
-        const count = await Product.countDocuments(query);
+        const { count, rows } = await Product.findAndCountAll({
+            where,
+            include: [{
+                model: Category,
+                as: 'category',
+                attributes: ['id', 'name']
+            }],
+            limit: parseInt(limit),
+            offset,
+            order
+        });
 
         res.status(200).json({
             success: true,
-            data: products,
+            data: rows,
             pagination: {
-                page: Number(page),
-                limit: Number(limit),
+                page: parseInt(page),
+                limit: parseInt(limit),
                 total: count,
                 pages: Math.ceil(count / limit)
             }
@@ -58,7 +65,13 @@ export const getProducts = async (req, res, next) => {
 // @access  Public
 export const getProduct = async (req, res, next) => {
     try {
-        const product = await Product.findById(req.params.id).populate('categoryId', 'name');
+        const product = await Product.findByPk(req.params.id, {
+            include: [{
+                model: Category,
+                as: 'category',
+                attributes: ['id', 'name']
+            }]
+        });
 
         if (!product) {
             return res.status(404).json({
@@ -81,7 +94,14 @@ export const getProduct = async (req, res, next) => {
 // @access  Public
 export const getProductBySKU = async (req, res, next) => {
     try {
-        const product = await Product.findOne({ sku: req.params.sku }).populate('categoryId', 'name');
+        const product = await Product.findOne({
+            where: { sku: req.params.sku },
+            include: [{
+                model: Category,
+                as: 'category',
+                attributes: ['id', 'name']
+            }]
+        });
 
         if (!product) {
             return res.status(404).json({
@@ -104,9 +124,18 @@ export const getProductBySKU = async (req, res, next) => {
 // @access  Public
 export const getBestDeal = async (req, res, next) => {
     try {
-        const product = await Product.findOne({ isAvailable: true })
-            .sort('-currentDiscount')
-            .populate('categoryId', 'name');
+        const product = await Product.findOne({
+            where: {
+                current_discount: { [Op.gt]: 0 },
+                is_available: true
+            },
+            include: [{
+                model: Category,
+                as: 'category',
+                attributes: ['id', 'name']
+            }],
+            order: [['current_discount', 'DESC']]
+        });
 
         res.status(200).json({
             success: true,
@@ -122,7 +151,7 @@ export const getBestDeal = async (req, res, next) => {
 // @access  Public
 export const getRelatedProducts = async (req, res, next) => {
     try {
-        const product = await Product.findById(req.params.id);
+        const product = await Product.findByPk(req.params.id);
 
         if (!product) {
             return res.status(404).json({
@@ -131,13 +160,19 @@ export const getRelatedProducts = async (req, res, next) => {
             });
         }
 
-        const relatedProducts = await Product.find({
-            categoryId: product.categoryId,
-            _id: { $ne: product._id },
-            isAvailable: true
-        })
-            .limit(4)
-            .populate('categoryId', 'name');
+        const relatedProducts = await Product.findAll({
+            where: {
+                category_id: product.category_id,
+                id: { [Op.ne]: product.id },
+                is_available: true
+            },
+            include: [{
+                model: Category,
+                as: 'category',
+                attributes: ['id', 'name']
+            }],
+            limit: 4
+        });
 
         res.status(200).json({
             success: true,
@@ -153,7 +188,13 @@ export const getRelatedProducts = async (req, res, next) => {
 // @access  Private/Admin
 export const createProduct = async (req, res, next) => {
     try {
-        const product = await Product.create(req.body);
+        const productData = { ...req.body };
+
+        if (req.file) {
+            productData.picture_name = req.file.filename;
+        }
+
+        const product = await Product.create(productData);
 
         res.status(201).json({
             success: true,
@@ -169,14 +210,7 @@ export const createProduct = async (req, res, next) => {
 // @access  Private/Admin
 export const updateProduct = async (req, res, next) => {
     try {
-        const product = await Product.findByIdAndUpdate(
-            req.params.id,
-            req.body,
-            {
-                new: true,
-                runValidators: true
-            }
-        );
+        const product = await Product.findByPk(req.params.id);
 
         if (!product) {
             return res.status(404).json({
@@ -184,6 +218,14 @@ export const updateProduct = async (req, res, next) => {
                 message: 'Product not found'
             });
         }
+
+        const updateData = { ...req.body };
+
+        if (req.file) {
+            updateData.picture_name = req.file.filename;
+        }
+
+        await product.update(updateData);
 
         res.status(200).json({
             success: true,
@@ -199,7 +241,7 @@ export const updateProduct = async (req, res, next) => {
 // @access  Private/Admin
 export const deleteProduct = async (req, res, next) => {
     try {
-        const product = await Product.findByIdAndDelete(req.params.id);
+        const product = await Product.findByPk(req.params.id);
 
         if (!product) {
             return res.status(404).json({
@@ -207,6 +249,8 @@ export const deleteProduct = async (req, res, next) => {
                 message: 'Product not found'
             });
         }
+
+        await product.destroy();
 
         res.status(200).json({
             success: true,

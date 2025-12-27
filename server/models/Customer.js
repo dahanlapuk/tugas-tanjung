@@ -1,33 +1,40 @@
-import mongoose from 'mongoose';
+import { DataTypes } from 'sequelize';
+import sequelize from '../config/database.js';
 
-const customerSchema = new mongoose.Schema({
-    userId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
-        required: true
+const Customer = sequelize.define('Customer', {
+    id: {
+        type: DataTypes.INTEGER,
+        primaryKey: true,
+        autoIncrement: true
+    },
+    user_id: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        references: {
+            model: 'users',
+            key: 'id'
+        },
+        onDelete: 'CASCADE'
     },
     name: {
-        type: String,
-        required: [true, 'Name is required'],
-        trim: true
+        type: DataTypes.STRING(191),
+        allowNull: false
     },
-    phoneNumber: {
-        type: String,
-        trim: true
+    phone_number: {
+        type: DataTypes.STRING(20),
+        allowNull: true
     },
     address: {
-        type: String,
-        required: [true, 'Address is required'],
-        trim: true
+        type: DataTypes.TEXT,
+        allowNull: true
     },
-    profilePicture: {
-        type: String,
-        default: null
+    profile_picture: {
+        type: DataTypes.STRING(128),
+        allowNull: true
     }
 }, {
+    tableName: 'customers',
     timestamps: true
 });
-
-const Customer = mongoose.model('Customer', customerSchema);
 
 export default Customer;

@@ -1,45 +1,48 @@
-import mongoose from 'mongoose';
+import { DataTypes } from 'sequelize';
+import sequelize from '../config/database.js';
 
-const paymentSchema = new mongoose.Schema({
-    orderId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Order',
-        required: true
+const Payment = sequelize.define('Payment', {
+    id: {
+        type: DataTypes.BIGINT,
+        primaryKey: true,
+        autoIncrement: true
     },
-    paymentPrice: {
-        type: Number,
-        required: true,
-        min: 0
+    order_id: {
+        type: DataTypes.BIGINT,
+        allowNull: false,
+        references: {
+            model: 'orders',
+            key: 'id'
+        },
+        onDelete: 'CASCADE'
     },
-    paymentDate: {
-        type: Date,
-        default: Date.now
+    payment_price: {
+        type: DataTypes.DECIMAL(10, 2),
+        allowNull: false
     },
-    pictureName: {
-        type: String,
-        default: null
+    payment_date: {
+        type: DataTypes.DATE,
+        defaultValue: DataTypes.NOW
     },
-    paymentStatus: {
-        type: String,
-        enum: ['pending', 'confirmed', 'rejected'],
-        default: 'pending'
+    picture_name: {
+        type: DataTypes.STRING(191),
+        allowNull: true
     },
-    confirmedDate: {
-        type: Date,
-        default: null
+    payment_status: {
+        type: DataTypes.ENUM('pending', 'confirmed', 'rejected'),
+        defaultValue: 'pending'
     },
-    paymentData: {
-        transferTo: String,
-        source: {
-            bank: String,
-            name: String,
-            number: String
-        }
+    confirmed_date: {
+        type: DataTypes.DATE,
+        allowNull: true
+    },
+    payment_data: {
+        type: DataTypes.JSON,
+        allowNull: true
     }
 }, {
+    tableName: 'payments',
     timestamps: true
 });
-
-const Payment = mongoose.model('Payment', paymentSchema);
 
 export default Payment;

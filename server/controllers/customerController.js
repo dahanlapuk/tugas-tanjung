@@ -1,13 +1,18 @@
-import Customer from '../models/Customer.js';
-import User from '../models/User.js';
+import { Customer, User } from '../models/index.js';
 
 // @desc    Get customer profile
 // @route   GET /api/customers/profile
 // @access  Private
 export const getProfile = async (req, res, next) => {
     try {
-        const customer = await Customer.findOne({ userId: req.user.id })
-            .populate('userId', 'name email username profilePicture');
+        const customer = await Customer.findOne({
+            where: { user_id: req.user.id },
+            include: [{
+                model: User,
+                as: 'user',
+                attributes: ['id', 'name', 'email', 'username', 'profile_picture']
+            }]
+        });
 
         if (!customer) {
             return res.status(404).json({
@@ -32,7 +37,9 @@ export const updateProfile = async (req, res, next) => {
     try {
         const { name, phoneNumber, address } = req.body;
 
-        const customer = await Customer.findOne({ userId: req.user.id });
+        const customer = await Customer.findOne({
+            where: { user_id: req.user.id }
+        });
 
         if (!customer) {
             return res.status(404).json({
@@ -42,19 +49,17 @@ export const updateProfile = async (req, res, next) => {
         }
 
         // Update customer
-        if (name) customer.name = name;
-        if (phoneNumber) customer.phoneNumber = phoneNumber;
-        if (address) customer.address = address;
+        const updateData = {};
+        if (name) updateData.name = name;
+        if (phoneNumber) updateData.phone_number = phoneNumber;
+        if (address) updateData.address = address;
+        if (req.file) updateData.profile_picture = req.file.filename;
 
-        if (req.file) {
-            customer.profilePicture = req.file.filename;
-        }
-
-        await customer.save();
+        await customer.update(updateData);
 
         // Update user name if provided
         if (name) {
-            await User.findByIdAndUpdate(req.user.id, { name });
+            await User.update({ name }, { where: { id: req.user.id } });
         }
 
         res.status(200).json({
@@ -73,21 +78,25 @@ export const getCustomers = async (req, res, next) => {
     try {
         const { page = 1, limit = 10 } = req.query;
 
-        const customers = await Customer.find()
-            .populate('userId', 'name email username createdAt')
-            .sort('-createdAt')
-            .limit(limit * 1)
-            .skip((page - 1) * limit)
-            .exec();
+        const offset = (page - 1) * limit;
 
-        const count = await Customer.countDocuments();
+        const { count, rows } = await Customer.findAndCountAll({
+            include: [{
+                model: User,
+                as: 'user',
+                attributes: ['id', 'name', 'email', 'username', 'created_at']
+            }],
+            limit: parseInt(limit),
+            offset,
+            order: [['created_at', 'DESC']]
+        });
 
         res.status(200).json({
             success: true,
-            data: customers,
+            data: rows,
             pagination: {
-                page: Number(page),
-                limit: Number(limit),
+                page: parseInt(page),
+                limit: parseInt(limit),
                 total: count,
                 pages: Math.ceil(count / limit)
             }
